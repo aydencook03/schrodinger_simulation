@@ -4,10 +4,27 @@ import numpy as np
 
 
 class Grid1D:
-    def __init__(self, domain=(-1.0, 1.0), count=1000, *args, **kwargs):
+    def __init__(self, domain=(-1.0, 1.0), count=1000):
         self.x = np.linspace(domain[0], domain[1], count)
-        self.dx = (self.x[-1] - self.x[0]) / (self.x.size - 1)
-        self.y = np.zeros(self.x.size, dtype=complex)
+        self.dx = (domain[1] - domain[0]) / (count - 1)
+        self.y = np.zeros(count, dtype=complex)
+
+    def sec_deriv(self):
+        d2ydx2 = np.zeros_like(self.y)
+        # central difference for the interior points
+        d2ydx2[1:-1] = (self.y[:-2] - 2*self.y[1:-1] + self.y[2:])/(self.dx**2)
+        # forward difference for the first point
+        d2ydx2[0] = (self.y[2] - 2*self.y[1] + self.y[0])/(self.dx**2)
+        # backward difference for the last point
+        d2ydx2[-1] = (self.y[-1] - 2*self.y[-2] + self.y[-3])/(self.dx**2)
+        return d2ydx2
+
+    def rk4_step(self, dydt, dt, *args, **kwargs):
+        k1 = dydt(self.y, *args, **kwargs)
+        k2 = dydt(self.y + k1*dt/2, *args, **kwargs)
+        k3 = dydt(self.y + k2*dt/2, *args, **kwargs)
+        k4 = dydt(self.y + k3*dt, *args, **kwargs)
+        self.y += (k1 + 2*k2 + 2*k3 + k4)*dt/6
 
 ##############################################################################################
 
