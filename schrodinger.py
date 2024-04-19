@@ -6,7 +6,7 @@ import matplotlib.animation as anim
 
 
 class Grid1D:
-    def __init__(self, domain=(-1.0, 1.0), count=1000):
+    def __init__(self, domain=(-1.0, 1.0), count=100):
         self.x = np.linspace(domain[0], domain[1], count)
         self.dx = (domain[1] - domain[0]) / (count - 1)
         self.y = np.zeros(count, dtype=complex)
@@ -76,26 +76,39 @@ class Particle:
     def imaginary_step(self, dt):
         pass
 
-    def animate(self, dt, steps, interval):
-        fig, ax = plt.subplots()
-        real_line, = ax.plot(self.psi.x, self.psi.y.real, label='Real Part')
+    def animate(self, dt=1/3600, anim_length=5, anim_speed=1, x_lim=None, y_lim=None):
+        fig = plt.figure("Schrodinger Simulation")
+        ax = fig.add_subplot()
+
+        mag_line, = ax.plot(self.psi.x, np.abs(self.psi.y),
+                            label="$\sqrt{P}$", linestyle="-")
+        real_line, = ax.plot(self.psi.x, self.psi.y.real,
+                             label="$Re(\psi)$", linestyle="--")
         imag_line, = ax.plot(self.psi.x, self.psi.y.imag,
-                             label='Imaginary Part')
-        ax.legend()
+                             label="$Im(\psi)$", linestyle="--")
+
+        ax.legend(loc="upper right")
+        ax.set_xlabel("x")
+        ax.set_ylabel("$\psi$")
+
+        x_lim = (self.psi.x[0], self.psi.x[-1]) if x_lim is None else x_lim
+        y_lim = (-np.max(np.abs(self.psi.y)),
+                 np.max(np.abs(self.psi.y))) if y_lim is None else y_lim
 
         def init():
-            ax.set_xlim(self.psi.x[0], self.psi.x[-1])
-            ax.set_ylim(-1, 1)
-            return real_line, imag_line
+            ax.set_xlim(*x_lim)
+            ax.set_ylim(*y_lim)
+            return mag_line, real_line, imag_line
 
         def update(frame):
             self.step(dt)
+            mag_line.set_ydata(np.abs(self.psi.y))
             real_line.set_ydata(self.psi.y.real)
             imag_line.set_ydata(self.psi.y.imag)
-            return real_line, imag_line
+            return mag_line, real_line, imag_line
 
         ani = anim.FuncAnimation(fig, update, frames=range(
-            steps), init_func=init, blit=True, interval=interval)
+            int(anim_length/dt)), init_func=init, blit=True, interval=int(1000*dt/anim_speed))
         plt.show()
 
 ##############################################################################################
@@ -103,5 +116,5 @@ class Particle:
 
 if __name__ == "__main__":
     particle = Particle.wave_packet(
-        x_0=0, p_0=1, sigma_x=0.5, domain=(-5, 5), count=1000)
-    particle.animate(dt=0.001, steps=1000, interval=50)
+        x_0=0, p_0=10, sigma_x=0.1, domain=(-1, 1))
+    particle.animate(x_lim=(-1.1, 1.1))
