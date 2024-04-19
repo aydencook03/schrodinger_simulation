@@ -9,6 +9,11 @@ class Grid1D:
         self.dx = (domain[1] - domain[0]) / (count - 1)
         self.y = np.zeros(count, dtype=complex)
 
+    def __add__(self, other):
+        result = Grid1D(domain=(self.x[0], self.x[-1]), count=self.x.size)
+        result.y = self.y + other.y
+        return result
+
     def sec_deriv(self):
         d2ydx2 = np.zeros_like(self.y)
         # central difference for the interior points
@@ -20,28 +25,45 @@ class Grid1D:
         return d2ydx2
 
     def rk4_step(self, dydt, dt, *args, **kwargs):
-        k1 = dydt(self.y, *args, **kwargs)
-        k2 = dydt(self.y + k1*dt/2, *args, **kwargs)
-        k3 = dydt(self.y + k2*dt/2, *args, **kwargs)
-        k4 = dydt(self.y + k3*dt, *args, **kwargs)
+        k1 = dydt(self, *args, **kwargs)
+        k2 = dydt(self + k1*dt/2, *args, **kwargs)
+        k3 = dydt(self + k2*dt/2, *args, **kwargs)
+        k4 = dydt(self + k3*dt, *args, **kwargs)
         self.y += (k1 + 2*k2 + 2*k3 + k4)*dt/6
 
 ##############################################################################################
 
 
 class Particle:
-    def __init__(self, mass=1.0, h_bar=1.0, *args, **kwargs):
+    def __init__(self, mass=1.0, h_bar=1.0, **kwargs):
         self.mass = float(mass)
         self.h_bar = float(h_bar)
-        self.psi = Grid1D(*args, **kwargs)
+        self.psi = Grid1D(**kwargs)
         self.potentials = []
         self.time = 0.0
 
-    def add_potential(self, function, period=None, *args, **kwargs):
+    def wave_packet():
         pass
 
+    def add_potential(self, func, period=None, *args, **kwargs):
+        def v(t, x): return func(t, x, *args, **kwargs)
+        self.potentials.append(v)
+
+    def normalize(self):
+        norm = np.sqrt(np.sum(np.abs(self.psi.y)**2 * self.psi.dx))
+        self.psi.y /= norm
+
     def step(self, dt):
-        pass
+        V = np.zeros_like(self.psi.x)
+        for pot in self.potentials:
+            V += pot(self.time, self.psi.x)
+
+        def dydt(psi):
+            return 1j*self.h_bar*psi.sec_deriv()/(2*self.mass) - 1j*V*psi.y/self.h_bar
+
+        self.psi.rk4_step(dydt, dt)
+        self.normalize()
+        self.time += dt
 
     def imaginary_step(self, dt):
         pass
