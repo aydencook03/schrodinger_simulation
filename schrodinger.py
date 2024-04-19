@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as anim
 
 ##############################################################################################
 
@@ -10,8 +12,9 @@ class Grid1D:
         self.y = np.zeros(count, dtype=complex)
 
     def __add__(self, other):
+        other_y = other.y if isinstance(other, Grid1D) else other
         result = Grid1D(domain=(self.x[0], self.x[-1]), count=self.x.size)
-        result.y = self.y + other.y
+        result.y = self.y + other_y
         return result
 
     def sec_deriv(self):
@@ -42,8 +45,13 @@ class Particle:
         self.potentials = []
         self.time = 0.0
 
-    def wave_packet():
-        pass
+    def wave_packet(x_0, p_0, sigma_x, **kwargs):
+        particle = Particle(**kwargs)
+        const = 1/(2*np.pi*sigma_x**2)**(1/4)
+        gauss = np.exp(-((particle.psi.x - x_0)**2)/(4*sigma_x**2))
+        momen = np.exp(1j*p_0*particle.psi.x/particle.h_bar)
+        particle.psi.y = const*gauss*momen
+        return particle
 
     def add_potential(self, func, period=None, *args, **kwargs):
         def v(t, x): return func(t, x, *args, **kwargs)
@@ -68,33 +76,32 @@ class Particle:
     def imaginary_step(self, dt):
         pass
 
-##############################################################################################
+    def animate(self, dt, steps, interval):
+        fig, ax = plt.subplots()
+        real_line, = ax.plot(self.psi.x, self.psi.y.real, label='Real Part')
+        imag_line, = ax.plot(self.psi.x, self.psi.y.imag,
+                             label='Imaginary Part')
+        ax.legend()
 
+        def init():
+            ax.set_xlim(self.psi.x[0], self.psi.x[-1])
+            ax.set_ylim(-1, 1)
+            return real_line, imag_line
 
-class Grid2D:
-    def __init__(self):
-        pass
+        def update(frame):
+            self.step(dt)
+            real_line.set_ydata(self.psi.y.real)
+            imag_line.set_ydata(self.psi.y.imag)
+            return real_line, imag_line
 
-##############################################################################################
-
-
-class System:
-    def __init__(self, mass_1=1.0, mass_2=1.0, stats="fermion", h_bar=1.0, *args, **kwargs):
-        self.mass_1 = float(mass_1)
-        self.mass_2 = float(mass_2)
-        self.h_bar = float(h_bar)
-        self.stats = stats
-        self.psi = Grid2D(*args, **kwargs)
-        self.potentials = []
-        self.time = 0.0
-
-    def add_potential(self, function, *args, **kwargs):
-        pass
-
-    def step(self, dt):
-        pass
-
-    def imaginary_step(self, dt):
-        pass
+        ani = anim.FuncAnimation(fig, update, frames=range(
+            steps), init_func=init, blit=True, interval=interval)
+        plt.show()
 
 ##############################################################################################
+
+
+if __name__ == "__main__":
+    particle = Particle.wave_packet(
+        x_0=0, p_0=1, sigma_x=0.5, domain=(-5, 5), count=1000)
+    particle.animate(dt=0.001, steps=1000, interval=50)
