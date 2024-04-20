@@ -6,14 +6,15 @@ import matplotlib.animation as anim
 
 
 class Grid1D:
-    def __init__(self, domain=(-1.0, 1.0), count=100):
+    def __init__(self, domain=(-10.0, 10.0), dx=20/999):
+        count = int((domain[1] - domain[0])/dx + 1)
         self.x = np.linspace(domain[0], domain[1], count)
-        self.dx = (domain[1] - domain[0]) / (count - 1)
+        self.dx = dx
         self.y = np.zeros(count, dtype=complex)
 
     def __add__(self, other):
         other_y = other.y if isinstance(other, Grid1D) else other
-        result = Grid1D(domain=(self.x[0], self.x[-1]), count=self.x.size)
+        result = Grid1D(domain=(self.x[0], self.x[-1]), dx=self.dx)
         result.y = self.y + other_y
         return result
 
@@ -27,12 +28,19 @@ class Grid1D:
         d2ydx2[-1] = (self.y[-1] - 2*self.y[-2] + self.y[-3])/(self.dx**2)
         return d2ydx2
 
-    def rk4_step(self, dydt, dt, *args, **kwargs):
+    def rk4_step(self, dydt, dt, bound="zero", *args, **kwargs):
         k1 = dydt(self, *args, **kwargs)
         k2 = dydt(self + k1*dt/2, *args, **kwargs)
         k3 = dydt(self + k2*dt/2, *args, **kwargs)
         k4 = dydt(self + k3*dt, *args, **kwargs)
         self.y += (k1 + 2*k2 + 2*k3 + k4)*dt/6
+        if bound == "zero":
+            self.y[0] = 0
+            self.y[-1] = 0
+        elif bound == "periodic":
+            pass
+        else:
+            pass
 
 ##############################################################################################
 
@@ -61,7 +69,7 @@ class Particle:
         norm = np.sqrt(np.sum(np.abs(self.psi.y)**2 * self.psi.dx))
         self.psi.y /= norm
 
-    def step(self, dt):
+    def step(self, dt, **kwargs):
         V = np.zeros_like(self.psi.x)
         for pot in self.potentials:
             V += pot(self.time, self.psi.x)
@@ -69,14 +77,14 @@ class Particle:
         def dydt(psi):
             return 1j*self.h_bar*psi.sec_deriv()/(2*self.mass) - 1j*V*psi.y/self.h_bar
 
-        self.psi.rk4_step(dydt, dt)
+        self.psi.rk4_step(dydt, dt, **kwargs)
         self.normalize()
         self.time += dt
 
     def imaginary_step(self, dt):
         pass
 
-    def animate(self, dt=1/3600, anim_length=5, anim_speed=1, x_lim=None, y_lim=None):
+    def animate(self, dt=1/3600, anim_length=5, anim_speed=1, x_lim=None, y_lim=None, **kwargs):
         fig = plt.figure("Schrodinger Simulation")
         ax = fig.add_subplot()
 
@@ -101,7 +109,7 @@ class Particle:
             return mag_line, real_line, imag_line
 
         def update(frame):
-            self.step(dt)
+            self.step(dt, **kwargs)
             mag_line.set_ydata(np.abs(self.psi.y))
             real_line.set_ydata(self.psi.y.real)
             imag_line.set_ydata(self.psi.y.imag)
@@ -115,6 +123,5 @@ class Particle:
 
 
 if __name__ == "__main__":
-    particle = Particle.wave_packet(
-        x_0=0, p_0=10, sigma_x=0.1, domain=(-1, 1))
-    particle.animate(x_lim=(-1.1, 1.1))
+    particle = Particle.wave_packet(x_0=0, p_0=10, sigma_x=0.1)
+    particle.animate(x_lim=(-1, 1))
