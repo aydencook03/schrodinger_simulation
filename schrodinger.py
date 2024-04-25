@@ -42,6 +42,10 @@ class Grid1D:
         else:
             pass
 
+    def inner_prod(grid_1, grid_2):
+        return np.sum(np.conjugate(grid_1.y)*grid_2.y*grid_1.dx)
+
+
 ##############################################################################################
 
 
@@ -64,7 +68,7 @@ class Particle:
         self.normalize()
         return self
 
-    def add_potential(self, func, period=None, *args, **kwargs):
+    def add_potential(self, func, *args, **kwargs):
         def v(t, x): return func(t, x, *args, **kwargs)
         self.potentials.append(v)
         return self
@@ -94,43 +98,59 @@ class Particle:
         self.time += dt
 
     def imaginary_step(self, dt, **kwargs):
-        pass
+        self.step(-1j*dt, **kwargs)
 
     def animate(self, dt=1/3600, anim_length=10, anim_speed=1, x_lim=None, y_lim=None, **kwargs):
         fig = plt.figure("Schrodinger Simulation")
         ax = fig.add_subplot()
 
+        # set the limits for the x and y axes
+        x_lim = (self.psi.x[0], self.psi.x[-1]) if x_lim is None else x_lim
+        y_lim = (-np.max(np.abs(self.psi.y)),
+                 np.max(np.abs(self.psi.y))) if y_lim is None else y_lim
+        ax.set_xlim(*x_lim)
+        ax.set_ylim(*y_lim)
+
+        # plot the wavefunction lines
         mag_line, = ax.plot(self.psi.x, np.abs(self.psi.y),
                             label="$\sqrt{P}$", linestyle="-")
         real_line, = ax.plot(self.psi.x, self.psi.y.real,
                              label="$Re(\psi)$", linestyle="--")
         imag_line, = ax.plot(self.psi.x, self.psi.y.imag,
                              label="$Im(\psi)$", linestyle="--")
-        pot_line = ax.fill_between(
-            self.psi.x, self.total_potential(), label="V", color="green", alpha=0.2)
 
+        # initialize the potential fill
+        pot_fill = ax.fill_between(
+            self.psi.x, 0, self.total_potential(), color='green', alpha=0.2)
+
+        # set labels and legend
         ax.legend(loc="upper right")
         ax.set_xlabel("x")
         ax.set_ylabel("$\psi$")
 
-        x_lim = (self.psi.x[0], self.psi.x[-1]) if x_lim is None else x_lim
-        y_lim = (-np.max(np.abs(self.psi.y)),
-                 np.max(np.abs(self.psi.y))) if y_lim is None else y_lim
-
+        # initialize the animation
         def init():
-            ax.set_xlim(*x_lim)
-            ax.set_ylim(*y_lim)
-            return mag_line, real_line, imag_line
+            return mag_line, real_line, imag_line, pot_fill
 
+        # update function for the animation
         def update(frame):
+            nonlocal pot_fill
             self.step(dt, **kwargs)
             mag_line.set_ydata(np.abs(self.psi.y))
             real_line.set_ydata(self.psi.y.real)
             imag_line.set_ydata(self.psi.y.imag)
-            return mag_line, real_line, imag_line
 
+            # update the potential fill if it changes over time
+            pot_fill.remove()
+            pot_fill = ax.fill_between(
+                self.psi.x, 0, self.total_potential(), color='green', alpha=0.2)
+
+            return mag_line, real_line, imag_line, pot_fill
+
+        # create the animation
         ani = anim.FuncAnimation(fig, update, frames=range(
-            int(anim_length/dt)), init_func=init, blit=True, interval=int(1000*dt/anim_speed))
+            int(anim_length/dt)), init_func=init, blit=True, interval=1000*dt/anim_speed)
+
         plt.show()
 
 ##############################################################################################
@@ -166,10 +186,15 @@ def wave_packet(psi_x, x_0=0.0, p_0=0.0, sigma_x=0.2, h_bar=1.0):
 def simple_harmonic(t, x, m=1.0, omega=10.0):
     return m*(omega**2)*(x**2)/2
 
+
+def barrier(t, x, x_0, width=1, height=300):
+    cond = (x >= x_0 - width/2) & (x <= x_0 + width/2)
+    return np.where(cond, height, 0)
+
 ##############################################################################################
 
 
 if __name__ == "__main__":
     particle = Particle.from_initial(
-        wave_packet, x_0=0, p_0=10, sigma_x=0.1).add_potential(simple_harmonic)
-    particle.animate(x_lim=(-1, 1))
+        wave_packet, x_0=0, p_0=20, sigma_x=0.1).add_potential(barrier, 1.5)
+    particle.animate(x_lim=(-1, 4))
