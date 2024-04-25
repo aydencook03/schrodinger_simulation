@@ -121,7 +121,7 @@ class Particle:
 
         # initialize the potential fill
         pot_fill = ax.fill_between(
-            self.psi.x, 0, self.total_potential(), color='green', alpha=0.2)
+            self.psi.x, 0, self.total_potential()/700, color='green', alpha=0.2)
 
         # set labels and legend
         ax.legend(loc="upper right")
@@ -143,7 +143,7 @@ class Particle:
             # update the potential fill if it changes over time
             pot_fill.remove()
             pot_fill = ax.fill_between(
-                self.psi.x, 0, self.total_potential(), color='green', alpha=0.2)
+                self.psi.x, 0, self.total_potential()/700, color='green', alpha=0.2)
 
             return mag_line, real_line, imag_line, pot_fill
 
@@ -197,4 +197,4 @@ def barrier(t, x, x_0, width=1, height=300):
 if __name__ == "__main__":
     particle = Particle.from_initial(
         wave_packet, x_0=0, p_0=20, sigma_x=0.1).add_potential(barrier, 1.5)
-    particle.animate(x_lim=(-1, 4))
+    particle.animate(x_lim=(-4, 4))
