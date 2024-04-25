@@ -6,7 +6,7 @@ import matplotlib.animation as anim
 
 
 class Grid1D:
-    def __init__(self, domain=(-10.0, 10.0), dx=20/999):
+    def __init__(self, domain=(-10.0, 10.0), dx=20/999, **kwargs):
         count = int((domain[1] - domain[0])/dx + 1)
         self.x = np.linspace(domain[0], domain[1], count)
         self.dx = dx
@@ -28,16 +28,16 @@ class Grid1D:
         d2ydx2[-1] = (self.y[-1] - 2*self.y[-2] + self.y[-3])/(self.dx**2)
         return d2ydx2
 
-    def rk4_step(self, dydt, dt, bound="zero", *args, **kwargs):
+    def rk4_step(self, dydt, dt, boundary="fixed", *args, **kwargs):
         k1 = dydt(self, *args, **kwargs)
         k2 = dydt(self + k1*dt/2, *args, **kwargs)
         k3 = dydt(self + k2*dt/2, *args, **kwargs)
         k4 = dydt(self + k3*dt, *args, **kwargs)
         self.y += (k1 + 2*k2 + 2*k3 + k4)*dt/6
-        if bound == "zero":
+        if boundary == "fixed":
             self.y[0] = 0
             self.y[-1] = 0
-        elif bound == "periodic":
+        elif boundary == "periodic":
             pass
         else:
             pass
@@ -53,17 +53,27 @@ class Particle:
         self.potentials = []
         self.time = 0.0
 
-    def wave_packet(x_0, p_0, sigma_x, **kwargs):
+    def from_initial(func, *args, **kwargs):
         particle = Particle(**kwargs)
-        const = 1/(2*np.pi*sigma_x**2)**(1/4)
-        gauss = np.exp(-((particle.psi.x - x_0)**2)/(4*sigma_x**2))
-        momen = np.exp(1j*p_0*particle.psi.x/particle.h_bar)
-        particle.psi.y = const*gauss*momen
+        particle.psi.y = func(particle.psi.x, *args, **kwargs)
+        particle.normalize()
         return particle
+
+    def add_initial(self, func, *args, **kwargs):
+        self.psi.y += func(self.psi.x, *args, **kwargs)
+        self.normalize()
+        return self
 
     def add_potential(self, func, period=None, *args, **kwargs):
         def v(t, x): return func(t, x, *args, **kwargs)
         self.potentials.append(v)
+        return self
+
+    def total_potential(self):
+        V = np.zeros_like(self.psi.x)
+        for pot in self.potentials:
+            V += pot(self.time, self.psi.x)
+        return V
 
     def normalize(self):
         norm = np.sqrt(np.sum(np.abs(self.psi.y)**2 * self.psi.dx))
@@ -75,16 +85,18 @@ class Particle:
             V += pot(self.time, self.psi.x)
 
         def dydt(psi):
-            return 1j*self.h_bar*psi.sec_deriv()/(2*self.mass) - 1j*V*psi.y/self.h_bar
+            momen = 1j*self.h_bar*psi.sec_deriv()/(2*self.mass)
+            pot = 1j*self.total_potential()*psi.y/self.h_bar
+            return momen - pot
 
         self.psi.rk4_step(dydt, dt, **kwargs)
         self.normalize()
         self.time += dt
 
-    def imaginary_step(self, dt):
+    def imaginary_step(self, dt, **kwargs):
         pass
 
-    def animate(self, dt=1/3600, anim_length=5, anim_speed=1, x_lim=None, y_lim=None, **kwargs):
+    def animate(self, dt=1/3600, anim_length=10, anim_speed=1, x_lim=None, y_lim=None, **kwargs):
         fig = plt.figure("Schrodinger Simulation")
         ax = fig.add_subplot()
 
@@ -94,6 +106,8 @@ class Particle:
                              label="$Re(\psi)$", linestyle="--")
         imag_line, = ax.plot(self.psi.x, self.psi.y.imag,
                              label="$Im(\psi)$", linestyle="--")
+        pot_line = ax.fill_between(
+            self.psi.x, self.total_potential(), label="V", color="green", alpha=0.2)
 
         ax.legend(loc="upper right")
         ax.set_xlabel("x")
@@ -120,8 +134,42 @@ class Particle:
         plt.show()
 
 ##############################################################################################
+# Builtin Initial Conditions
+
+
+def uniform(psi_x, x_area=(-5, 5)):
+    cond = (psi_x >= x_area[0]) & (psi_x <= x_area[1])
+    psi_y = np.where(cond, 1+0j, 0+0j)/(x_area[1] - x_area[0])
+    return psi_y
+
+
+def plane_wave(psi_x, p=0, h_bar=1.0):
+    """
+    An eigenstate of the momentum operator and the (zero-potential) energy operator.
+    """
+    const = 1/np.sqrt(2*np.pi*h_bar)
+    psi_y = const*np.exp(1j*p*psi_x/h_bar)
+    return psi_y
+
+
+def wave_packet(psi_x, x_0=0.0, p_0=0.0, sigma_x=0.2, h_bar=1.0):
+    const = 1/(2*np.pi*sigma_x**2)**(1/4)
+    gauss = np.exp(-((psi_x - x_0)**2)/(4*sigma_x**2))
+    momen = np.exp(1j*p_0*psi_x/h_bar)
+    psi_y = const*gauss*momen
+    return psi_y
+
+##############################################################################################
+# Builtin Potentials
+
+
+def simple_harmonic(t, x, m=1.0, omega=10.0):
+    return m*(omega**2)*(x**2)/2
+
+##############################################################################################
 
 
 if __name__ == "__main__":
-    particle = Particle.wave_packet(x_0=0, p_0=10, sigma_x=0.1)
+    particle = Particle.from_initial(
+        wave_packet, x_0=0, p_0=10, sigma_x=0.1).add_potential(simple_harmonic)
     particle.animate(x_lim=(-1, 1))
