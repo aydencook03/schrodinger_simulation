@@ -56,6 +56,7 @@ class Particle:
         self.psi = Grid1D(**kwargs)
         self.potentials = []
         self.time = 0.0
+        self.running = True
 
     def from_initial(func, *args, **kwargs):
         particle = Particle(**kwargs)
@@ -73,7 +74,7 @@ class Particle:
         self.potentials.append(v)
         return self
 
-    def total_potential(self):
+    def potential(self):
         V = np.zeros_like(self.psi.x)
         for pot in self.potentials:
             V += pot(self.time, self.psi.x)
@@ -83,24 +84,29 @@ class Particle:
         norm = np.sqrt(np.sum(np.abs(self.psi.y)**2 * self.psi.dx))
         self.psi.y /= norm
 
-    def step(self, dt, **kwargs):
-        V = np.zeros_like(self.psi.x)
-        for pot in self.potentials:
-            V += pot(self.time, self.psi.x)
+    def step(self, dt, before_step=None, **kwargs):
+        if self.running:
+            V = np.zeros_like(self.psi.x)
+            for pot in self.potentials:
+                V += pot(self.time, self.psi.x)
 
-        def dydt(psi):
-            momen = 1j*self.h_bar*psi.sec_deriv()/(2*self.mass)
-            pot = 1j*self.total_potential()*psi.y/self.h_bar
-            return momen - pot
+            def dydt(psi):
+                momen = 1j*self.h_bar*psi.sec_deriv()/(2*self.mass)
+                pot = 1j*self.potential()*psi.y/self.h_bar
+                return momen - pot
 
-        self.psi.rk4_step(dydt, dt, **kwargs)
-        self.normalize()
-        self.time += dt
+            before_step(self) if before_step is not None else None
+            self.psi.rk4_step(dydt, dt, **kwargs)
+            self.normalize()
+            self.time += dt
 
     def imaginary_step(self, dt, **kwargs):
         self.step(-1j*dt, **kwargs)
 
-    def animate(self, dt=1/3600, anim_length=10, anim_speed=1, x_lim=None, y_lim=None, **kwargs):
+    def pause_play(self):
+        self.running = not self.running
+
+    def animate(self, dt=1/3600, anim_length=10, anim_speed=1, x_lim=None, y_lim=None, notebook=False, **kwargs):
         fig = plt.figure("Schrodinger Simulation")
         ax = fig.add_subplot()
 
@@ -121,7 +127,7 @@ class Particle:
 
         # initialize the potential fill
         pot_fill = ax.fill_between(
-            self.psi.x, 0, self.total_potential()/700, color='green', alpha=0.2)
+            self.psi.x, 0, self.potential()/700, color='green', alpha=0.2)
 
         # set labels and legend
         ax.legend(loc="upper right")
@@ -143,7 +149,7 @@ class Particle:
             # update the potential fill if it changes over time
             pot_fill.remove()
             pot_fill = ax.fill_between(
-                self.psi.x, 0, self.total_potential()/700, color='green', alpha=0.2)
+                self.psi.x, 0, self.potential()/700, color='green', alpha=0.2)
 
             return mag_line, real_line, imag_line, pot_fill
 
@@ -151,7 +157,10 @@ class Particle:
         ani = anim.FuncAnimation(fig, update, frames=range(
             int(anim_length/dt)), init_func=init, blit=True, interval=1000*dt/anim_speed)
 
-        plt.show()
+        if notebook:
+            return ani
+        else:
+            plt.show()
 
 ##############################################################################################
 # Builtin Initial Conditions
