@@ -6,7 +6,7 @@ import matplotlib.animation as anim
 
 
 class Grid1D:
-    def __init__(self, domain=(-10.0, 10.0), dx=20/999, **kwargs):
+    def __init__(self, domain=(-20.0, 20.0), dx=20/999, **kwargs):
         count = int((domain[1] - domain[0])/dx + 1)
         self.x = np.linspace(domain[0], domain[1], count)
         self.dx = dx
