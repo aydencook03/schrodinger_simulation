@@ -42,9 +42,6 @@ class Grid1D:
         else:
             pass
 
-    def inner_prod(grid_1, grid_2):
-        return np.sum(np.conjugate(grid_1.y)*grid_2.y*grid_1.dx)
-
 
 ##############################################################################################
 
@@ -94,6 +91,23 @@ class Particle:
             before_step(self) if before_step is not None else None
             self.psi.rk4_step(dydt, dt, **kwargs)
             self.time += dt
+
+    def find_eigenstates(self, count=4, dt=1/3600, damp_time=2.0, **kwargs):
+        self.eigenstates = [None]*count
+        self.time = 0.0
+        initial_psi_y = np.copy(self.psi.y)
+        for n in range(count):
+            def remove_prev(particle):
+                for i in range(n):
+                    overlap = np.sum(np.conjugate(
+                        particle.eigenstates[i])*particle.psi.y*particle.psi.dx)
+                    particle.psi.y -= overlap*particle.eigenstates[i]
+            while abs(self.time) <= damp_time:
+                self.step(dt, before_step=remove_prev,
+                          damp_eigen=True, **kwargs)
+            self.eigenstates[n] = np.copy(self.psi.y)
+            self.psi.y = initial_psi_y
+            self.time = 0.0
 
     def pause_play(self):
         self.running = not self.running
@@ -148,9 +162,14 @@ class Particle:
             time_text.set_text('Time: {:.2f}'.format(self.time))
             return mag_line, real_line, imag_line, pot_fill, time_text
 
+        if dt != 0.0:
+            frame_count = int(anim_length/dt)
+        else:
+            frame_count = 0
+
         # create the animation
         ani = anim.FuncAnimation(fig, update, frames=range(
-            int(anim_length/dt)), init_func=init, blit=True, interval=1000*dt/anim_speed)
+            frame_count), init_func=init, blit=True, interval=1000*dt/anim_speed)
 
         if notebook:
             return ani
