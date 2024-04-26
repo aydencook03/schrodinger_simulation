@@ -92,7 +92,7 @@ class Particle:
             self.psi.rk4_step(dydt, dt, **kwargs)
             self.time += dt
 
-    def find_eigenstates(self, count=4, dt=1/3600, damp_time=2.0, **kwargs):
+    def find_eigenstates(self, count=4, dt=1/3600, damp_time=2.5, **kwargs):
         self.eigenstates = [None]*count
         self.time = 0.0
         initial_psi_y = np.copy(self.psi.y)
