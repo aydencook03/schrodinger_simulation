@@ -61,12 +61,10 @@ class Particle:
     def from_initial(func, *args, **kwargs):
         particle = Particle(**kwargs)
         particle.psi.y = func(particle.psi.x, *args, **kwargs)
-        particle.normalize()
         return particle
 
     def add_initial(self, func, *args, **kwargs):
         self.psi.y += func(self.psi.x, *args, **kwargs)
-        self.normalize()
         return self
 
     def add_potential(self, func, *args, **kwargs):
@@ -77,36 +75,30 @@ class Particle:
     def potential(self):
         V = np.zeros_like(self.psi.x)
         for pot in self.potentials:
-            V += pot(self.time, self.psi.x)
+            V += pot(np.real(self.time), self.psi.x)
         return V
 
     def normalize(self):
         norm = np.sqrt(np.sum(np.abs(self.psi.y)**2 * self.psi.dx))
         self.psi.y /= norm
 
-    def step(self, dt, before_step=None, **kwargs):
+    def step(self, dt, before_step=None, damp_eigen=False, **kwargs):
+        dt = -1j*abs(dt) if damp_eigen else abs(dt)
         if self.running:
-            V = np.zeros_like(self.psi.x)
-            for pot in self.potentials:
-                V += pot(self.time, self.psi.x)
-
             def dydt(psi):
                 momen = 1j*self.h_bar*psi.sec_deriv()/(2*self.mass)
                 pot = 1j*self.potential()*psi.y/self.h_bar
                 return momen - pot
 
+            self.normalize()
             before_step(self) if before_step is not None else None
             self.psi.rk4_step(dydt, dt, **kwargs)
-            self.normalize()
             self.time += dt
-
-    def imaginary_step(self, dt, **kwargs):
-        self.step(-1j*dt, **kwargs)
 
     def pause_play(self):
         self.running = not self.running
 
-    def animate(self, dt=1/3600, anim_length=10, anim_speed=1, x_lim=None, y_lim=None, notebook=False, **kwargs):
+    def animate(self, dt=1/3600, anim_length=10, anim_speed=1, x_lim=None, y_lim=None, notebook=False, v_scale=700, **kwargs):
         fig = plt.figure("Schrodinger Simulation")
         ax = fig.add_subplot()
 
@@ -127,7 +119,11 @@ class Particle:
 
         # initialize the potential fill
         pot_fill = ax.fill_between(
-            self.psi.x, 0, self.potential()/700, color='green', alpha=0.2)
+            self.psi.x, 0, self.potential()/v_scale, color='green', alpha=0.2, label="V")
+
+        # show the time in the top left
+        time_text = ax.text(0.02, 0.97, '', transform=ax.transAxes, fontsize=10,
+                            verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
         # set labels and legend
         ax.legend(loc="upper right")
@@ -141,17 +137,16 @@ class Particle:
         # update function for the animation
         def update(frame):
             nonlocal pot_fill
+            nonlocal time_text
             self.step(dt, **kwargs)
             mag_line.set_ydata(np.abs(self.psi.y))
             real_line.set_ydata(self.psi.y.real)
             imag_line.set_ydata(self.psi.y.imag)
-
-            # update the potential fill if it changes over time
             pot_fill.remove()
             pot_fill = ax.fill_between(
-                self.psi.x, 0, self.potential()/700, color='green', alpha=0.2)
-
-            return mag_line, real_line, imag_line, pot_fill
+                self.psi.x, 0, self.potential()/v_scale, color='green', alpha=0.2, label="V")
+            time_text.set_text('Time: {:.2f}'.format(self.time))
+            return mag_line, real_line, imag_line, pot_fill, time_text
 
         # create the animation
         ani = anim.FuncAnimation(fig, update, frames=range(
@@ -192,7 +187,7 @@ def wave_packet(psi_x, x_0=0.0, p_0=0.0, sigma_x=0.2, h_bar=1.0):
 # Builtin Potentials
 
 
-def simple_harmonic(t, x, m=1.0, omega=10.0):
+def simple_harmonic(t, x, m=1.0, omega=5.0):
     return m*(omega**2)*(x**2)/2
 
 
