@@ -72,12 +72,18 @@ class Particle:
     def potential(self):
         V = np.zeros_like(self.psi.x)
         for pot in self.potentials:
-            V += pot(np.real(self.time), self.psi.x)
+            V += pot(self.time.real, self.psi.x)
         return V
+
+    def hamiltonian(self):
+        mom = -(self.h_bar**2)*self.psi.sec_deriv()/(2*self.mass)
+        pot = self.potential()*self.psi.y
+        return mom + pot
 
     def normalize(self):
         norm = np.sqrt(np.sum(np.abs(self.psi.y)**2 * self.psi.dx))
         self.psi.y /= norm
+        return self
 
     def step(self, dt, before_step=None, damp_eigen=False, **kwargs):
         dt = -1j*abs(dt) if damp_eigen else abs(dt)
@@ -92,8 +98,9 @@ class Particle:
             self.psi.rk4_step(dydt, dt, **kwargs)
             self.time += dt
 
-    def find_eigenstates(self, count=4, dt=1/3600, damp_time=2.5, **kwargs):
+    def find_eigen(self, count=4, dt=1/3600, damp_time=2.0, **kwargs):
         self.eigenstates = [None]*count
+        self.eigenvalues = [None]*count
         self.time = 0.0
         initial_psi_y = np.copy(self.psi.y)
         for n in range(count):
@@ -106,15 +113,18 @@ class Particle:
                 self.step(dt, before_step=remove_prev,
                           damp_eigen=True, **kwargs)
             self.eigenstates[n] = np.copy(self.psi.y)
+            self.eigenvalues[n] = np.sum(np.conjugate(
+                self.eigenstates[n])*self.hamiltonian()*self.psi.dx).real
             self.psi.y = initial_psi_y
             self.time = 0.0
 
     def pause_play(self):
         self.running = not self.running
 
-    def animate(self, dt=1/3600, anim_length=10, anim_speed=1, x_lim=None, y_lim=None, notebook=False, v_scale=700, **kwargs):
-        fig = plt.figure("Schrodinger Simulation")
+    def animate(self, dt=1/3600, anim_length=10, anim_speed=1, x_lim=None, y_lim=None, notebook=False, v_scale=700, title="Schrodinger Simulation", **kwargs):
+        fig = plt.figure(title)
         ax = fig.add_subplot()
+        plt.title(title)
 
         # set the limits for the x and y axes
         x_lim = (self.psi.x[0], self.psi.x[-1]) if x_lim is None else x_lim
@@ -175,6 +185,32 @@ class Particle:
             return ani
         else:
             plt.show()
+
+    def plot_eigen(self, x_lim=None, y_lim=None, eigenvalues=True, imag=False, prob=False, v_scale=1, title="Potential & Eigenstates"):
+        fig = plt.figure(title)
+        ax = fig.add_subplot()
+        plt.title(title)
+        x_lim = [-2, 2] if x_lim is None else x_lim
+        y_lim = [-1.5, 1.5*self.eigenvalues[-1] -
+                 0.5*self.eigenvalues[-2]+1.5] if y_lim is None else y_lim
+        ax.set_xlim(*x_lim)
+        ax.set_ylim(*y_lim)
+        for n, psi_y in reversed(list(enumerate(self.eigenstates))):
+            ax.plot(self.psi.x, psi_y.real +
+                    self.eigenvalues[n], label="E = {:.2f}".format(self.eigenvalues[n]))
+            if imag:
+                ax.plot(self.psi.x, psi_y.imag +
+                        self.eigenvalues[n], linestyle="--", color="red")
+            if prob:
+                ax.plot(self.psi.x, np.abs(psi_y) +
+                        self.eigenvalues[n], linestyle="--", color="black")
+        ax.fill_between(self.psi.x, 0, self.potential() /
+                        v_scale, color='green', alpha=0.2, label="V")
+        ax.set_xlabel("x")
+        ax.set_ylabel("$\psi, E$")
+        if eigenvalues:
+            ax.legend(loc="upper right")
+        plt.show()
 
 ##############################################################################################
 # Builtin Initial Conditions
