@@ -135,28 +135,30 @@ class Particle:
 
         # plot the wavefunction lines
         mag_line, = ax.plot(self.psi.x, np.abs(self.psi.y),
-                            label="$\sqrt{P}$", linestyle="-")
+                            label="$\\sqrt{P}$", linestyle="-")
         real_line, = ax.plot(self.psi.x, self.psi.y.real,
-                             label="$Re(\psi)$", linestyle="--")
+                             label="$Re(\\psi)$", linestyle="--")
         imag_line, = ax.plot(self.psi.x, self.psi.y.imag,
-                             label="$Im(\psi)$", linestyle="--")
+                             label="$Im(\\psi)$", linestyle="--")
+        pot_line, = ax.plot(self.psi.x, self.potential() /
+                            v_scale, label="V", color="black")
 
         # initialize the potential fill
-        pot_fill = ax.fill_between(
-            self.psi.x, 0, self.potential()/v_scale, color='green', alpha=0.2, label="V")
+        pot_fill = ax.fill_between(self.psi.x, min(0, np.min(self.potential(
+        )/v_scale)), self.potential()/v_scale, color="green", alpha=0.2)
 
         # show the time in the top left
-        time_text = ax.text(0.02, 0.97, '', transform=ax.transAxes, fontsize=10,
-                            verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+        time_text = ax.text(0.02, 0.97, "", transform=ax.transAxes, fontsize=10,
+                            verticalalignment="top", bbox=dict(boxstyle="round", facecolor="white", alpha=0.8))
 
         # set labels and legend
         ax.legend(loc="upper right")
         ax.set_xlabel("x")
-        ax.set_ylabel("$\psi$")
+        ax.set_ylabel("$\\psi$")
 
         # initialize the animation
         def init():
-            return mag_line, real_line, imag_line, pot_fill
+            return mag_line, real_line, imag_line, pot_line, pot_fill, time_text
 
         # update function for the animation
         def update(frame):
@@ -166,11 +168,12 @@ class Particle:
             mag_line.set_ydata(np.abs(self.psi.y))
             real_line.set_ydata(self.psi.y.real)
             imag_line.set_ydata(self.psi.y.imag)
+            pot_line.set_ydata(self.potential()/v_scale)
             pot_fill.remove()
-            pot_fill = ax.fill_between(
-                self.psi.x, 0, self.potential()/v_scale, color='green', alpha=0.2, label="V")
-            time_text.set_text('Time: {:.2f}'.format(self.time))
-            return mag_line, real_line, imag_line, pot_fill, time_text
+            pot_fill = ax.fill_between(self.psi.x, min(0, np.min(self.potential(
+            )/v_scale)), self.potential()/v_scale, color="green", alpha=0.2)
+            time_text.set_text("Time: {:.2f}".format(self.time))
+            return mag_line, real_line, imag_line, pot_line, pot_fill, time_text
 
         if dt != 0.0:
             frame_count = int(anim_length/dt)
@@ -204,10 +207,11 @@ class Particle:
             if prob:
                 ax.plot(self.psi.x, np.abs(psi_y) +
                         self.eigenvalues[n], linestyle="--", color="black")
-        ax.fill_between(self.psi.x, 0, self.potential() /
-                        v_scale, color='green', alpha=0.2, label="V")
+        ax.plot(self.psi.x, self.potential()/v_scale, label="V", color="black")
+        ax.fill_between(self.psi.x, min(0, np.min(self.potential()/v_scale)),
+                        self.potential()/v_scale, color="green", alpha=0.2)
         ax.set_xlabel("x")
-        ax.set_ylabel("$\psi, E$")
+        ax.set_ylabel("$\\psi, E$")
         if eigenvalues:
             ax.legend(loc="upper right")
         plt.show()
