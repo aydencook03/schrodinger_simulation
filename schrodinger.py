@@ -200,13 +200,13 @@ class Particle:
         ax.set_ylim(*y_lim)
         for n, psi_y in reversed(list(enumerate(self.eigenstates))):
             ax.plot(self.psi.x, psi_y.real +
-                    self.eigenvalues[n], label="E = {:.2f}".format(self.eigenvalues[n]))
+                    self.eigenvalues[n]/v_scale, label="E = {:.2f}".format(self.eigenvalues[n]))
             if imag:
                 ax.plot(self.psi.x, psi_y.imag +
-                        self.eigenvalues[n], linestyle="--", color="red")
+                        self.eigenvalues[n]/v_scale, linestyle="--", color="red")
             if prob:
                 ax.plot(self.psi.x, np.abs(psi_y) +
-                        self.eigenvalues[n], linestyle="--", color="black")
+                        self.eigenvalues[n]/v_scale, linestyle="--", color="black")
         ax.plot(self.psi.x, self.potential()/v_scale, label="V", color="black")
         ax.fill_between(self.psi.x, min(0, np.min(self.potential()/v_scale)),
                         self.potential()/v_scale, color="green", alpha=0.2)
@@ -254,8 +254,9 @@ def barrier(t, x, x_0, width=1, height=300):
     cond = (x >= x_0 - width/2) & (x <= x_0 + width/2)
     return np.where(cond, height, 0)
 
-def coulomb(t, x, x_0=0.0, q_squared=-1.0, epsilon=0.001):
-    return q_squared/(4*np.pi*epsilon*np.abs(x-x_0))
+
+def coulomb(t, x, x_0=0.0, q_squared=-1.0, epsilon=0.001, min_dist=0.05):
+    return q_squared/(4*np.pi*epsilon*(np.maximum(np.abs(x-x_0), min_dist)))
 
 ##############################################################################################
 
