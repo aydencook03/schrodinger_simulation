@@ -121,7 +121,7 @@ class Particle:
     def pause_play(self):
         self.running = not self.running
 
-    def animate(self, dt=1/3600, anim_length=10, anim_speed=1, x_lim=None, y_lim=None, notebook=False, v_scale=700, title="Schrodinger Simulation", **kwargs):
+    def animate(self, dt=1/3600, anim_length=5, anim_speed=1, x_lim=None, y_lim=None, notebook=False, v_scale=700, title="Schrodinger Simulation", **kwargs):
         fig = plt.figure(title)
         ax = fig.add_subplot()
         plt.title(title)
@@ -253,6 +253,9 @@ def simple_harmonic(t, x, m=1.0, omega=5.0):
 def barrier(t, x, x_0, width=1, height=300):
     cond = (x >= x_0 - width/2) & (x <= x_0 + width/2)
     return np.where(cond, height, 0)
+
+def coulomb(t, x, x_0=0.0, q_squared=-1.0, epsilon=0.001):
+    return q_squared/(4*np.pi*epsilon*np.abs(x-x_0))
 
 ##############################################################################################
 
