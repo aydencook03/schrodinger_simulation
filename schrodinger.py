@@ -121,7 +121,7 @@ class Particle:
     def pause_play(self):
         self.running = not self.running
 
-    def animate(self, dt=1/3600, anim_length=5, anim_speed=1, x_lim=None, y_lim=None, notebook=False, v_scale=700, title="Schrodinger Simulation", **kwargs):
+    def animate(self, dt=1/3600, anim_length=0.5, anim_speed=1, x_lim=None, y_lim=None, notebook=False, v_scale=700, title="Schrodinger Simulation", save=False, **kwargs):
         fig = plt.figure(title)
         ax = fig.add_subplot()
         plt.title(title)
@@ -183,6 +183,9 @@ class Particle:
         # create the animation
         ani = anim.FuncAnimation(fig, update, frames=range(
             frame_count), init_func=init, blit=True, interval=1000*dt/anim_speed)
+
+        if save:
+            ani.save(title + ".gif", writer="ffmpeg", fps=int(anim_speed/dt))
 
         if notebook:
             return ani
