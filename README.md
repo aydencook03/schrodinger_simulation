@@ -15,6 +15,8 @@ This project aims to solve the Schrödinger equation numerically. It includes Py
 
 ### Features
 - Implementation of numerical methods for solving the Schrödinger equation.
+- Flexibility to define custom initial conditions for the wavefunction.
+- Ability to simulate wavefunction dynamics in arbitrary potentials, including time-dependent scenarios.
 - Jupyter notebook examples for easy understanding.
 - Modular code to allow easy extension.
 
@@ -29,11 +31,11 @@ To get started, clone the repository and install the dependencies. The project u
 ### Installation
 1. Clone the repository:
    ```sh
-   git clone <repository_url>
+   git clone https://github.com/aydencook03/schrodinger_simulation.git
    ```
 2. Navigate to the project directory:
    ```sh
-   cd <project_directory>
+   cd schrodinger_simulation
    ```
 3. Install dependencies with `pipenv`:
    ```sh
