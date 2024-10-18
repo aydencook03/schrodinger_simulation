@@ -16,7 +16,8 @@ This project aims to solve the Schrödinger equation numerically. It includes Py
 ### Features
 - Implementation of numerical methods for solving the Schrödinger equation.
 - Flexibility to define custom initial conditions for the wavefunction.
-- Ability to simulate wavefunction dynamics in arbitrary potentials, including time-dependent scenarios.
+- Simulate and view wavefunction dynamics in arbitrary potentials, including time-dependent scenarios.
+- Find and view energy eigenstates and eigenvalues for arbitrary potentials.
 - Jupyter notebook examples for easy understanding.
 - Modular code to allow easy extension.
 
