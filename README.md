@@ -25,7 +25,7 @@ This project aims to solve the Schrödinger equation numerically. It includes Py
 To get started, clone the repository and install the dependencies. The project uses `pipenv` for managing Python packages.
 
 ### Prerequisites
-- Python 3.8 or higher
+- Python 3.11
 - Pipenv for dependency management
 
 ### Installation
@@ -44,12 +44,18 @@ To get started, clone the repository and install the dependencies. The project u
 
 ### Running the Examples
 
-A Jupyter notebook of examples is provided so that users can learn how to use the Schrödinger equation solver step-by-step and visualize the results interactively.
+A Jupyter notebook is provided to help users learn how to use the Schrödinger equation solver step-by-step and visualize the results interactively.
 
-You can run the provided examples notebook using JupyterLab. To do this, start a pipenv shell:
+To run the examples, install the development dependencies, including JupyterLab:
+```sh
+pipenv install --dev
+```
+
+Start a pipenv shell:
 ```sh
 pipenv shell
 ```
+
 Then open JupyterLab:
 ```sh
 jupyter lab Examples.ipynb
