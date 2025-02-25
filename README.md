@@ -4,7 +4,7 @@ Simulating the Schrödinger Equation with Python.
 
 This Python module numerically solves the Schrödinger Equation, enabling simulations of quantum systems with arbitrary initial conditions and potentials, including time-dependent ones.
 
-The module supports real-time visualization of wavefunction dynamics and can calculate energy eigenstates and eigenvalues for custom potentials. Animations and plots are automatically handled but allow for customization if needed.
+The module supports real-time visualization of wavefunction dynamics and can calculate energy eigenstates and eigenvalues for custom potentials. Animations and plots are automatically handled, but allow for customization if needed.
 
 A Jupyter notebook with examples is included to demonstrate some of its features and capabilities.
 
